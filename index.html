@@ -4,7 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Worklog — Stay Honest</title>
-  <meta name="description" content="A focused worklog timer. Every 30 minutes, write down what you actually did." />
+  <meta name="description" content="A brutal, distraction-free worklog timer. Every 30 minutes, your screen freezes and you write down what you actually did." />
+  
+  <!-- Open Graph / Social Meta Tags -->
+  <meta property="og:title" content="Worklog — Stay Honest" />
+  <meta property="og:description" content="A focused worklog timer. Every 30 minutes, write down what you actually did. No dashboards, just radical honesty." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://karthik-zoro-96.github.io/worklog/" />
+  
+  <!-- Twitter Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Worklog — Stay Honest" />
+  <meta name="twitter:description" content="A focused worklog timer. Every 30 minutes, write down what you actually did. No dashboards, just radical honesty." />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -924,9 +938,26 @@
     }
 
     .hero-meta {
-      margin-top: 20px;
+      margin-top: 24px;
       font-size: 13px;
       color: var(--text-dimmer);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--success);
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin: 0 auto;
     }
 
     /* Running state in home */
@@ -1108,7 +1139,10 @@
       <button class="btn-hero-primary" id="start-btn">Start Session</button>
       <button class="btn-hero-secondary" id="open-log-btn-2">View Log</button>
     </div>
-    <p class="hero-meta fade-up-4" id="last-entry-meta"></p>
+    <div class="hero-meta fade-up-4">
+      <span class="privacy-badge">🔒 100% Local. No servers. Your data stays yours.</span>
+      <div id="last-entry-meta"></div>
+    </div>
   </div>
 
   <!-- Running state -->
