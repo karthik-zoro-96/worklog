@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worklog — Stay Honest</title>
+  <meta name="description" content="A focused worklog timer. Every 30 minutes, write down what you actually did." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d10;
+      --surface: #16161c;
+      --surface2: #1e1e28;
+      --surface3: #252533;
+      --border: rgba(255,255,255,0.07);
+      --border-bright: rgba(255,255,255,0.14);
+      --accent: #7c6af7;
+      --accent-glow: rgba(124, 106, 247, 0.35);
+      --accent2: #e879f9;
+      --text: #f0eff5;
+      --text-dim: #8b8a9e;
+      --text-dimmer: #4a4963;
+      --danger: #f87171;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ──────────── IDLE WIDGET ──────────── */
+
+    #idle-widget {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .widget-card {
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      min-width: 280px;
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(124,106,247,0.1);
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .widget-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(124,106,247,0.2), 0 0 32px var(--accent-glow);
+    }
+
+    .widget-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .widget-countdown {
+      font-size: 42px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .widget-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .widget-progress {
+      width: 100%;
+      height: 3px;
+      background: var(--surface3);
+      border-radius: 2px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+
+    .widget-progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s linear;
+    }
+
+    .widget-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface3);
+      color: var(--text);
+      border-color: var(--border-bright);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #8b7bf8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.12);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, 0.2);
+    }
+
+    /* ──────────── OVERLAY ──────────── */
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 14, 0.97);
+      backdrop-filter: blur(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* Noise texture overlay */
+    #overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    .overlay-inner {
+      width: 100%;
+      max-width: 680px;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    /* Timer ring */
+    .timer-ring-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+
+    .timer-ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+
+    .timer-ring-bg {
+      fill: none;
+      stroke: var(--surface3);
+      stroke-width: 6;
+    }
+
+    .timer-ring-fg {
+      fill: none;
+      stroke: url(#ring-gradient);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .timer-ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .timer-seconds {
+      font-size: 32px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .timer-seconds.urgent {
+      color: var(--danger);
+      animation: pulse-text 0.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-text {
+      from { opacity: 1; }
+      to { opacity: 0.5; }
+    }
+
+    .timer-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* Overlay header */
+    .overlay-header {
+      text-align: center;
+    }
+
+    .overlay-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .overlay-header p {
+      font-size: 15px;
+      color: var(--text-dim);
+      max-width: 420px;
+    }
+
+    .time-badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Textarea */
+    .log-textarea-wrap {
+      width: 100%;
+      position: relative;
+    }
+
+    #log-textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      caret-color: var(--accent);
+    }
+
+    #log-textarea::placeholder {
+      color: var(--text-dimmer);
+    }
+
+    #log-textarea:focus {
+      border-color: rgba(124, 106, 247, 0.5);
+      box-shadow: 0 0 0 3px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .textarea-hint {
+      position: absolute;
+      bottom: 12px;
+      right: 16px;
+      font-size: 11px;
+      color: var(--text-dimmer);
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Overlay actions */
+    .overlay-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-save {
+      flex: 1;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-save::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-save:hover::before { opacity: 1; }
+
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(124, 106, 247, 0.4), 0 0 0 1px rgba(124,106,247,0.3);
+    }
+
+    .btn-save:active { transform: translateY(0); }
+
+    .btn-skip {
+      padding: 14px 20px;
+      font-size: 13px;
+      background: var(--surface);
+      color: var(--text-dim);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s ease;
+    }
+
+    .btn-skip:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    /* Saved flash */
+    .saved-flash {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 13, 16, 0.95);
+      border-radius: var(--radius);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      font-size: 18px;
+      font-weight: 600;
+      gap: 10px;
+      color: var(--success);
+    }
+
+    .saved-flash.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* ──────────── LOG PANEL ──────────── */
+
+    #log-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 380px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+    }
+
+    #log-panel.open {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 14px;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface3);
+      color: var(--text);
+      border-color: var(--border-bright);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px 24px;
+    }
+
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-track { background: transparent; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+    .log-date-group {
+      margin-bottom: 24px;
+    }
+
+    .log-date-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
+    .log-entry {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .log-entry:hover {
+      border-color: var(--border-bright);
+      background: var(--surface3);
+    }
+
+    .log-entry-time {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+
+    .log-entry-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-dim);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-entry-delete {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      opacity: 0;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.2);
+      color: var(--danger);
+      border-radius: 6px;
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .log-entry:hover .log-entry-delete {
+      opacity: 1;
+    }
+
+    .log-entry-delete:hover {
+      background: rgba(248,113,113,0.25);
+    }
+
+    .empty-log {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-dimmer);
+    }
+
+    .empty-log-icon { font-size: 36px; }
+
+    .empty-log p {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .panel-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .stat-chip {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-key {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ──────────── SETTINGS PANEL ──────────── */
+
+    #settings-panel {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    #settings-panel.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .settings-card {
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow-lg);
+      transform: scale(0.95) translateY(10px);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #settings-panel.open .settings-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .settings-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .setting-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+    }
+
+    .setting-sublabel {
+      font-size: 11px;
+      color: var(--text-dimmer);
+    }
+
+    .setting-input {
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    .setting-input:focus {
+      border-color: var(--accent);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .toggle input { display: none; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid var(--border);
+    }
+
+    .toggle input:checked + .toggle-track {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+    }
+
+    .toggle input:checked ~ .toggle-thumb {
+      transform: translateX(18px);
+    }
+
+    .settings-footer {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ──────────── MAIN HOME AREA ──────────── */
+
+    #home {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .home-bg-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(124,106,247,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13, 13, 16, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .app-logo {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .logo-dot.active {
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+      animation: dot-blink 1s ease-in-out infinite;
+    }
+
+    @keyframes dot-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .top-bar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .home-hero {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-tag {
+      display: inline-block;
+      background: rgba(124,106,247,0.1);
+      border: 1px solid rgba(124,106,247,0.25);
+      color: #a899fb;
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .hero-title span {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 17px;
+      color: var(--text-dim);
+      max-width: 480px;
+      line-height: 1.65;
+      margin: 0 auto 40px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-hero-primary {
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(124,106,247,0.5);
+    }
+
+    .btn-hero-secondary {
+      padding: 14px 22px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 10px;
+      border: 1px solid var(--border-bright);
+      background: var(--surface);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s ease;
+    }
+
+    .btn-hero-secondary:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border-bright);
+    }
+
+    .hero-meta {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-dimmer);
+    }
+
+    /* Running state in home */
+    #home-running {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    #home-running.visible {
+      display: flex;
+    }
+
+    #home-idle.hidden {
+      display: none;
+    }
+
+    .running-ring-wrap {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .running-ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+
+    .running-ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .running-ring-time {
+      font-size: 40px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .running-ring-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .running-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-top: 8px;
+    }
+
+    .running-desc {
+      font-size: 15px;
+      color: var(--text-dim);
+    }
+
+    .running-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    /* Animated grid background */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .grid-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* Notification */
+    #notification {
+      position: fixed;
+      top: 70px;
+      right: 24px;
+      z-index: 400;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-lg);
+      font-size: 14px;
+      font-weight: 500;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #notification.show {
+      transform: translateX(0);
+    }
+
+    .notif-icon { font-size: 18px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .overlay-inner { padding: 28px 16px; gap: 24px; }
+      #log-panel { width: 100%; }
+      #idle-widget { bottom: 16px; right: 16px; left: 16px; align-items: stretch; }
+      .widget-card { min-width: unset; }
+    }
+
+    /* ── Scrollbar ── */
+    * { scrollbar-width: thin; scrollbar-color: var(--surface3) transparent; }
+
+    /* ── Focus ring ── */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Animations ── */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up { animation: fade-up 0.5s ease both; }
+    .fade-up-2 { animation: fade-up 0.5s 0.1s ease both; }
+    .fade-up-3 { animation: fade-up 0.5s 0.2s ease both; }
+    .fade-up-4 { animation: fade-up 0.5s 0.3s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="grid-bg"></div>
+
+<!-- Top bar -->
+<nav class="top-bar">
+  <div class="app-logo">
+    <div class="logo-dot" id="logo-dot"></div>
+    Worklog
+  </div>
+  <div class="top-bar-actions">
+    <button class="icon-btn" id="open-log-btn" title="View log" aria-label="View log">
+      📋
+    </button>
+    <button class="icon-btn" id="open-settings-btn" title="Settings" aria-label="Settings">
+      ⚙️
+    </button>
+  </div>
+</nav>
+
+<!-- ── Home ── -->
+<main id="home">
+  <div class="home-bg-glow"></div>
+
+  <!-- Idle state -->
+  <div id="home-idle" class="home-hero">
+    <div class="hero-tag fade-up">⏱ Every 30 minutes — stay honest</div>
+    <h1 class="hero-title fade-up-2">Know where your<br/><span>time is going.</span></h1>
+    <p class="hero-desc fade-up-3">
+      A full-screen pause every 30 minutes. Write down what you actually did.
+      That's it. No dashboards. No analytics. Just radical honesty.
+    </p>
+    <div class="hero-cta fade-up-4">
+      <button class="btn-hero-primary" id="start-btn">Start Session</button>
+      <button class="btn-hero-secondary" id="open-log-btn-2">View Log</button>
+    </div>
+    <p class="hero-meta fade-up-4" id="last-entry-meta"></p>
+  </div>
+
+  <!-- Running state -->
+  <div id="home-running">
+    <div class="running-ring-wrap">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <defs>
+          <linearGradient id="home-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#7c6af7"/>
+            <stop offset="100%" stop-color="#e879f9"/>
+          </linearGradient>
+        </defs>
+        <circle class="timer-ring-bg" cx="90" cy="90" r="80" stroke-width="8"/>
+        <circle id="home-ring-fg" cx="90" cy="90" r="80"
+          fill="none" stroke="url(#home-ring-gradient)" stroke-width="8"
+          stroke-linecap="round"/>
+      </svg>
+      <div class="running-ring-text">
+        <div class="running-ring-time" id="home-ring-time">30:00</div>
+        <div class="running-ring-label">until next pause</div>
+      </div>
+    </div>
+    <h2 class="running-title" id="session-title">Session running</h2>
+    <p class="running-desc" id="session-subtitle">Stay focused. The prompt will appear automatically.</p>
+    <div class="running-actions">
+      <button class="btn btn-ghost" id="trigger-now-btn">Prompt me now</button>
+      <button class="btn btn-danger" id="stop-btn">End Session</button>
+    </div>
+  </div>
+</main>
+
+<!-- ── Idle widget (when session running) ── -->
+<div id="idle-widget" style="display:none;">
+  <div class="widget-card">
+    <div class="widget-label">Next prompt in</div>
+    <div class="widget-countdown" id="widget-countdown">29:59</div>
+    <div class="widget-subtitle">Stay focused 🎯</div>
+    <div class="widget-progress">
+      <div class="widget-progress-bar" id="widget-progress-bar" style="width:100%;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Full-screen overlay ── -->
+<div id="overlay" role="dialog" aria-modal="true" aria-label="Worklog prompt">
+  <div class="overlay-inner">
+
+    <!-- Timer ring -->
+    <div class="timer-ring-wrap">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#7c6af7"/>
+            <stop offset="100%" stop-color="#e879f9"/>
+          </linearGradient>
+        </defs>
+        <circle class="timer-ring-bg" cx="60" cy="60" r="52"/>
+        <circle class="timer-ring-fg" id="ring-fg" cx="60" cy="60" r="52"/>
+      </svg>
+      <div class="timer-ring-text">
+        <div class="timer-seconds" id="timer-seconds">60</div>
+        <div class="timer-label">seconds</div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="overlay-header">
+      <div class="time-badge" id="overlay-time-badge">—</div>
+      <h1 id="overlay-prompt-text">What did you work on in the last 30 minutes?</h1>
+      <p>Be honest. This is just for you.</p>
+    </div>
+
+    <!-- Textarea -->
+    <div class="log-textarea-wrap" style="width:100%;position:relative;">
+      <textarea
+        id="log-textarea"
+        placeholder="e.g. Wrote the intro section of the blog post, got distracted by Twitter for 10 mins, reviewed PR feedback..."
+        spellcheck="true"
+        aria-label="What did you work on"
+      ></textarea>
+      <span class="textarea-hint" id="char-count">0 chars</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="overlay-actions">
+      <button class="btn-save" id="save-btn">✓ Save &amp; Continue</button>
+      <button class="btn-skip" id="skip-btn">Skip</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dimmer);">
+      <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">⌘ Enter</kbd>
+      to save
+    </p>
+  </div>
+</div>
+
+<!-- Saved flash -->
+<div class="saved-flash" id="saved-flash">
+  <span>✓</span> Entry saved
+</div>
+
+<!-- ── Log panel ── -->
+<aside id="log-panel" aria-label="Worklog entries">
+  <div class="panel-header">
+    <div class="panel-title">📋 Worklog</div>
+    <div class="panel-actions">
+      <button class="icon-btn" id="export-btn" title="Export log">⬇</button>
+      <button class="icon-btn" id="close-log-btn" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="panel-body" id="log-body">
+    <div class="empty-log">
+      <div class="empty-log-icon">🌱</div>
+      <p>No entries yet.<br/>Start a session and your first log will appear here.</p>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <div class="stats-row" id="stats-row"></div>
+    <button class="btn btn-danger" id="clear-log-btn" style="width:100%;justify-content:center;">
+      🗑 Clear all entries
+    </button>
+  </div>
+</aside>
+
+<!-- Log panel backdrop -->
+<div id="log-backdrop" style="
+  position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.5);
+  opacity:0;pointer-events:none;transition:opacity 0.3s;backdrop-filter:blur(4px);
+"></div>
+
+<!-- ── Settings panel ── -->
+<div id="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="settings-card">
+    <div class="settings-title">⚙️ Settings</div>
+    <div class="settings-group">
+      <div class="setting-row">
+        <div class="setting-label">Prompt interval (minutes)</div>
+        <div class="setting-sublabel">How often the overlay appears</div>
+        <input class="setting-input" type="number" id="setting-interval" min="1" max="120" value="30"/>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Overlay duration (seconds)</div>
+        <div class="setting-sublabel">How long you have to write</div>
+        <input class="setting-input" type="number" id="setting-duration" min="10" max="300" value="60"/>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Prompt question</div>
+        <input class="setting-input" type="text" id="setting-prompt"
+          value="What did you work on in the last 30 minutes?"/>
+      </div>
+      <div class="setting-row">
+        <div class="toggle-row">
+          <div>
+            <div class="setting-label">Sound notification</div>
+            <div class="setting-sublabel">Play a soft chime when overlay appears</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="setting-sound" checked/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="toggle-row">
+          <div>
+            <div class="setting-label">Auto-save on timeout</div>
+            <div class="setting-sublabel">Save entry automatically when timer runs out</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="setting-autosave" checked/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="settings-footer">
+      <button class="btn btn-primary" id="save-settings-btn" style="flex:1;justify-content:center;">Save settings</button>
+      <button class="btn btn-ghost" id="close-settings-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification toast -->
+<div id="notification">
+  <span class="notif-icon" id="notif-icon">✓</span>
+  <span id="notif-text">Saved!</span>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────
+const KEY_ENTRIES   = 'worklog_entries';
+const KEY_SETTINGS  = 'worklog_settings';
+const KEY_SESSION   = 'worklog_session';
+
+let settings = {
+  intervalMins: 30,
+  durationSecs: 60,
+  prompt: 'What did you work on in the last 30 minutes?',
+  sound: true,
+  autosave: true,
+};
+
+let entries = []; // { id, ts, text }
+let sessionRunning = false;
+let promptIntervalId = null;
+let overlayTimerId  = null;
+let widgetTickId    = null;
+let homeRingTickId  = null;
+let overlaySecsLeft = 0;
+let sessionStartTime = null;
+let nextPromptAt    = null;
+
+// Ring circumference
+const RING_R = 52;
+const RING_CIRC = 2 * Math.PI * RING_R;
+const HOME_RING_R = 80;
+const HOME_RING_CIRC = 2 * Math.PI * HOME_RING_R;
+
+// ─────────────────────────────────────────
+//  LOAD / SAVE
+// ─────────────────────────────────────────
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY_SETTINGS) || 'null');
+    if (s) Object.assign(settings, s);
+  } catch(e) {}
+  try {
+    entries = JSON.parse(localStorage.getItem(KEY_ENTRIES) || '[]');
+  } catch(e) { entries = []; }
+}
+
+function saveEntries() {
+  localStorage.setItem(KEY_ENTRIES, JSON.stringify(entries));
+}
+
+function saveSettings() {
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings));
+}
+
+// Persist session state so reloads restore the running session
+function saveSession() {
+  if (sessionRunning && nextPromptAt) {
+    localStorage.setItem(KEY_SESSION, JSON.stringify({
+      running: true,
+      nextPromptAt,
+      sessionStartTime,
+    }));
+  } else {
+    localStorage.removeItem(KEY_SESSION);
+  }
+}
+
+function loadSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY_SESSION) || 'null');
+    if (s && s.running && s.nextPromptAt) {
+      // Only restore if the next prompt hasn't already passed by more than the overlay duration
+      const msSincePrompt = Date.now() - s.nextPromptAt;
+      if (msSincePrompt < settings.durationSecs * 1000) {
+        return s;
+      }
+      // Prompt already passed while page was closed — skip it, schedule fresh
+      return { running: true, nextPromptAt: Date.now() + settings.intervalMins * 60 * 1000, sessionStartTime: s.sessionStartTime };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ─────────────────────────────────────────
+//  DOM REFS
+// ─────────────────────────────────────────
+const $overlay         = document.getElementById('overlay');
+const $timerSecs       = document.getElementById('timer-seconds');
+const $ringFg          = document.getElementById('ring-fg');
+const $logTextarea     = document.getElementById('log-textarea');
+const $saveBtn         = document.getElementById('save-btn');
+const $skipBtn         = document.getElementById('skip-btn');
+const $charCount       = document.getElementById('char-count');
+const $overlayTimeBadge = document.getElementById('overlay-time-badge');
+const $overlayPrompt   = document.getElementById('overlay-prompt-text');
+
+const $logPanel        = document.getElementById('log-panel');
+const $logBackdrop     = document.getElementById('log-backdrop');
+const $logBody         = document.getElementById('log-body');
+const $statsRow        = document.getElementById('stats-row');
+
+const $settingsPanel   = document.getElementById('settings-panel');
+const $notification    = document.getElementById('notification');
+const $notifText       = document.getElementById('notif-text');
+const $notifIcon       = document.getElementById('notif-icon');
+
+const $idleWidget      = document.getElementById('idle-widget');
+const $widgetCountdown = document.getElementById('widget-countdown');
+const $widgetProgressBar = document.getElementById('widget-progress-bar');
+
+const $homeIdle        = document.getElementById('home-idle');
+const $homeRunning     = document.getElementById('home-running');
+const $homeRingFg      = document.getElementById('home-ring-fg');
+const $homeRingTime    = document.getElementById('home-ring-time');
+const $sessionTitle    = document.getElementById('session-title');
+const $sessionSubtitle = document.getElementById('session-subtitle');
+const $logoDot         = document.getElementById('logo-dot');
+
+const $startBtn        = document.getElementById('start-btn');
+const $stopBtn         = document.getElementById('stop-btn');
+const $triggerNowBtn   = document.getElementById('trigger-now-btn');
+
+// ─────────────────────────────────────────
+//  AUDIO — soft chime
+// ─────────────────────────────────────────
+function playChime() {
+  if (!settings.sound) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const t = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+      osc.start(t);
+      osc.stop(t + 0.65);
+    });
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────
+//  SESSION
+// ─────────────────────────────────────────
+function startSession(restoredNextPromptAt) {
+  sessionRunning = true;
+  sessionStartTime = restoredNextPromptAt ? (Date.now() - settings.intervalMins * 60 * 1000) : Date.now();
+  nextPromptAt = restoredNextPromptAt || (Date.now() + settings.intervalMins * 60 * 1000);
+
+  $homeIdle.classList.add('hidden');
+  $homeRunning.classList.add('visible');
+  $logoDot.classList.add('active');
+  $idleWidget.style.display = 'none';
+
+  updateHomeRing();
+  homeRingTickId = setInterval(updateHomeRing, 1000);
+
+  scheduleNextPrompt();
+  updateLastEntryMeta();
+  saveSession();
+}
+
+function stopSession() {
+  sessionRunning = false;
+  clearInterval(homeRingTickId);
+  clearTimeout(promptIntervalId);
+  clearInterval(overlayTimerId);
+  $overlay.classList.remove('active');
+
+  $homeIdle.classList.remove('hidden');
+  $homeRunning.classList.remove('visible');
+  $idleWidget.style.display = 'none';
+  $logoDot.classList.remove('active');
+  updateHomeButtonCounts();
+  saveSession(); // clears saved session from localStorage
+}
+
+function scheduleNextPrompt() {
+  clearTimeout(promptIntervalId);
+  const ms = nextPromptAt - Date.now();
+  promptIntervalId = setTimeout(triggerPrompt, Math.max(ms, 100));
+}
+
+function triggerPrompt() {
+  if (!sessionRunning) return;
+  // Prevent double-trigger if overlay is already open
+  if ($overlay.classList.contains('active')) return;
+  showOverlay();
+}
+
+// ─────────────────────────────────────────
+//  HOME RING (interval countdown)
+// ─────────────────────────────────────────
+function updateHomeRing() {
+  if (!sessionRunning) return;
+  const totalMs = settings.intervalMins * 60 * 1000;
+  const remaining = Math.max(nextPromptAt - Date.now(), 0);
+  const frac = remaining / totalMs;
+
+  const dashOffset = HOME_RING_CIRC * (1 - frac);
+  $homeRingFg.style.strokeDasharray  = HOME_RING_CIRC;
+  $homeRingFg.style.strokeDashoffset = dashOffset;
+
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  $homeRingTime.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+
+  // Update widget countdown too
+  $widgetCountdown.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  $widgetProgressBar.style.width = (frac * 100) + '%';
+
+  // Don't double-trigger — scheduleNextPrompt's setTimeout handles the actual trigger
+  // This block is only a safety net if the tab was in background and ticks fired late
+  if (remaining <= 0 && !$overlay.classList.contains('active')) {
+    clearTimeout(promptIntervalId); // cancel stale timeout to avoid double-fire
+    triggerPrompt();
+  }
+}
+
+// ─────────────────────────────────────────
+//  OVERLAY
+// ─────────────────────────────────────────
+function showOverlay() {
+  // Clear any existing overlay timer before starting a fresh one
+  clearInterval(overlayTimerId);
+
+  playChime();
+  overlaySecsLeft = settings.durationSecs;
+  $overlayPrompt.textContent = settings.prompt;
+
+  const now = new Date();
+  $overlayTimeBadge.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  $logTextarea.value = '';
+  $charCount.textContent = '0 chars';
+  updateRing(1);
+  $timerSecs.textContent = overlaySecsLeft;
+  $timerSecs.classList.remove('urgent');
+
+  $overlay.classList.add('active');
+  setTimeout(() => $logTextarea.focus(), 300);
+
+  overlayTimerId = setInterval(tickOverlay, 1000);
+}
+
+function tickOverlay() {
+  overlaySecsLeft--;
+  $timerSecs.textContent = overlaySecsLeft;
+
+  const frac = overlaySecsLeft / settings.durationSecs;
+  updateRing(frac);
+
+  if (overlaySecsLeft <= 10) {
+    $timerSecs.classList.add('urgent');
+  }
+
+  if (overlaySecsLeft <= 0) {
+    if (settings.autosave) {
+      saveEntry(true);
+    } else {
+      closeOverlay();
+    }
+  }
+}
+
+function updateRing(frac) {
+  const dashOffset = RING_CIRC * (1 - frac);
+  $ringFg.style.strokeDasharray  = RING_CIRC;
+  $ringFg.style.strokeDashoffset = dashOffset;
+}
+
+function saveEntry(auto = false) {
+  clearInterval(overlayTimerId);
+  const text = $logTextarea.value.trim();
+
+  if (text || auto) {
+    const entry = {
+      id: Date.now(),
+      ts: new Date().toISOString(),
+      text: text || '(no entry)',
+    };
+    entries.unshift(entry);
+    saveEntries();
+    renderLog();
+    updateHomeButtonCounts();
+    updateLastEntryMeta();
+  }
+
+  closeOverlay();
+
+  if (text || auto) {
+    showNotification('✓', 'Entry saved!');
+  }
+}
+
+function closeOverlay() {
+  clearInterval(overlayTimerId);
+  $overlay.classList.remove('active');
+
+  // Reset next prompt
+  if (sessionRunning) {
+    nextPromptAt = Date.now() + settings.intervalMins * 60 * 1000;
+    scheduleNextPrompt();
+    updateHomeRing();
+    saveSession();
+  }
+}
+
+// ─────────────────────────────────────────
+//  LOG RENDERING
+// ─────────────────────────────────────────
+function renderLog() {
+  if (!entries.length) {
+    $logBody.innerHTML = `<div class="empty-log">
+      <div class="empty-log-icon">🌱</div>
+      <p>No entries yet.<br/>Start a session and your first log will appear here.</p>
+    </div>`;
+    $statsRow.innerHTML = '';
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  entries.forEach(e => {
+    const d = new Date(e.ts);
+    const key = d.toLocaleDateString([], { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  let html = '';
+  Object.keys(groups).forEach(date => {
+    html += `<div class="log-date-group">
+      <div class="log-date-label">${date}</div>`;
+    groups[date].forEach(e => {
+      const t = new Date(e.ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      const escaped = e.text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html += `<div class="log-entry" data-id="${e.id}">
+        <div class="log-entry-time">${t}</div>
+        <div class="log-entry-text">${escaped}</div>
+        <button class="log-entry-delete" onclick="deleteEntry(${e.id})" title="Delete entry">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  $logBody.innerHTML = html;
+
+  // Stats
+  const today = new Date().toDateString();
+  const todayCount = entries.filter(e => new Date(e.ts).toDateString() === today).length;
+  const totalDays = new Set(entries.map(e => new Date(e.ts).toDateString())).size;
+
+  $statsRow.innerHTML = `
+    <div class="stat-chip">
+      <div class="stat-value" style="color:var(--accent)">${todayCount}</div>
+      <div class="stat-key">Today</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value">${entries.length}</div>
+      <div class="stat-key">Total</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value">${totalDays}</div>
+      <div class="stat-key">Days</div>
+    </div>
+  `;
+}
+
+function deleteEntry(id) {
+  entries = entries.filter(e => e.id !== id);
+  saveEntries();
+  renderLog();
+  updateHomeButtonCounts();
+}
+
+// ─────────────────────────────────────────
+//  HOME UI
+// ─────────────────────────────────────────
+function updateHomeButtonCounts() {
+  const btn2 = document.getElementById('open-log-btn-2');
+  if (btn2) btn2.textContent = `View Log (${entries.length})`;
+}
+
+function updateLastEntryMeta() {
+  const el = document.getElementById('last-entry-meta');
+  if (!el) return;
+  if (!entries.length) {
+    el.textContent = '';
+    return;
+  }
+  const last = new Date(entries[0].ts);
+  el.textContent = `Last entry: ${last.toLocaleDateString()} at ${last.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// ─────────────────────────────────────────
+//  NOTIFICATIONS
+// ─────────────────────────────────────────
+let notifTimeout = null;
+function showNotification(icon, text) {
+  $notifIcon.textContent = icon;
+  $notifText.textContent = text;
+  $notification.classList.add('show');
+  clearTimeout(notifTimeout);
+  notifTimeout = setTimeout(() => $notification.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────
+//  EXPORT
+// ─────────────────────────────────────────
+function exportLog() {
+  if (!entries.length) {
+    showNotification('⚠️', 'No entries to export');
+    return;
+  }
+
+  const groups = {};
+  entries.forEach(e => {
+    const d = new Date(e.ts).toLocaleDateString([], { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(e);
+  });
+
+  let md = `# Worklog\n\nExported ${new Date().toLocaleString()}\n\n`;
+  Object.keys(groups).forEach(date => {
+    md += `## ${date}\n\n`;
+    groups[date].forEach(e => {
+      const t = new Date(e.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      md += `**${t}**\n${e.text}\n\n`;
+    });
+  });
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `worklog-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification('⬇', 'Log exported!');
+}
+
+// ─────────────────────────────────────────
+//  SETTINGS
+// ─────────────────────────────────────────
+function applySettingsToUI() {
+  document.getElementById('setting-interval').value  = settings.intervalMins;
+  document.getElementById('setting-duration').value  = settings.durationSecs;
+  document.getElementById('setting-prompt').value    = settings.prompt;
+  document.getElementById('setting-sound').checked   = settings.sound;
+  document.getElementById('setting-autosave').checked = settings.autosave;
+}
+
+function readSettingsFromUI() {
+  settings.intervalMins = Math.max(1, parseInt(document.getElementById('setting-interval').value) || 30);
+  settings.durationSecs = Math.max(10, parseInt(document.getElementById('setting-duration').value) || 60);
+  settings.prompt       = document.getElementById('setting-prompt').value.trim() || 'What did you work on?';
+  settings.sound        = document.getElementById('setting-sound').checked;
+  settings.autosave     = document.getElementById('setting-autosave').checked;
+  saveSettings();
+}
+
+// ─────────────────────────────────────────
+//  EVENT LISTENERS
+// ─────────────────────────────────────────
+
+// Start / stop
+$startBtn.addEventListener('click', () => startSession());
+$stopBtn.addEventListener('click', () => {
+  if (confirm('End session? Your current progress will be saved.')) {
+    stopSession();
+    showNotification('👋', 'Session ended');
+  }
+});
+
+// Trigger now — guard against opening a second overlay
+$triggerNowBtn.addEventListener('click', () => {
+  if ($overlay.classList.contains('active')) return;
+  clearTimeout(promptIntervalId);
+  nextPromptAt = Date.now();
+  triggerPrompt();
+});
+
+// Save & skip
+$saveBtn.addEventListener('click', () => saveEntry(false));
+$skipBtn.addEventListener('click', () => {
+  clearInterval(overlayTimerId);
+  closeOverlay();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if ($overlay.classList.contains('active')) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      saveEntry(false);
+    }
+    if (e.key === 'Escape') {
+      clearInterval(overlayTimerId);
+      closeOverlay();
+    }
+  }
+});
+
+// Char count
+$logTextarea.addEventListener('input', () => {
+  $charCount.textContent = $logTextarea.value.length + ' chars';
+});
+
+// Log panel
+document.getElementById('open-log-btn').addEventListener('click', openLogPanel);
+document.getElementById('open-log-btn-2').addEventListener('click', openLogPanel);
+document.getElementById('close-log-btn').addEventListener('click', closeLogPanel);
+$logBackdrop.addEventListener('click', closeLogPanel);
+
+function openLogPanel() {
+  renderLog();
+  $logPanel.classList.add('open');
+  $logBackdrop.style.opacity = '1';
+  $logBackdrop.style.pointerEvents = 'all';
+}
+function closeLogPanel() {
+  $logPanel.classList.remove('open');
+  $logBackdrop.style.opacity = '0';
+  $logBackdrop.style.pointerEvents = 'none';
+}
+
+// Export
+document.getElementById('export-btn').addEventListener('click', exportLog);
+
+// Clear
+document.getElementById('clear-log-btn').addEventListener('click', () => {
+  if (entries.length === 0) return;
+  if (confirm(`Delete all ${entries.length} entries? This cannot be undone.`)) {
+    entries = [];
+    saveEntries();
+    renderLog();
+    updateHomeButtonCounts();
+    updateLastEntryMeta();
+    showNotification('🗑', 'Log cleared');
+  }
+});
+
+// Settings
+document.getElementById('open-settings-btn').addEventListener('click', () => {
+  applySettingsToUI();
+  $settingsPanel.classList.add('open');
+});
+document.getElementById('close-settings-btn').addEventListener('click', () => {
+  $settingsPanel.classList.remove('open');
+});
+document.getElementById('save-settings-btn').addEventListener('click', () => {
+  readSettingsFromUI();
+  $settingsPanel.classList.remove('open');
+
+  if (sessionRunning) {
+    // Reschedule with new interval
+    nextPromptAt = Date.now() + settings.intervalMins * 60 * 1000;
+    scheduleNextPrompt();
+  }
+
+  showNotification('✓', 'Settings saved');
+});
+$settingsPanel.addEventListener('click', e => {
+  if (e.target === $settingsPanel) $settingsPanel.classList.remove('open');
+});
+
+// Expose deleteEntry globally
+window.deleteEntry = deleteEntry;
+
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+loadState();
+renderLog();
+updateHomeButtonCounts();
+updateLastEntryMeta();
+
+// Set ring circumference css
+$ringFg.style.strokeDasharray = RING_CIRC;
+$ringFg.style.strokeDashoffset = 0;
+$homeRingFg.style.strokeDasharray = HOME_RING_CIRC;
+$homeRingFg.style.strokeDashoffset = 0;
+
+// Restore session if it was running before reload
+(function restoreSession() {
+  const saved = loadSession();
+  if (saved && saved.running) {
+    sessionStartTime = saved.sessionStartTime || Date.now();
+    // If the next prompt time already passed, trigger immediately after a brief delay
+    const msSincePrompt = Date.now() - saved.nextPromptAt;
+    if (msSincePrompt >= 0) {
+      // Prompt was due while page was closed — show overlay right away
+      startSession(Date.now()); // fresh interval from now
+      setTimeout(() => triggerPrompt(), 600);
+    } else {
+      startSession(saved.nextPromptAt);
+    }
+  }
+})();
+</script>
+</body>
+</html>
