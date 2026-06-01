@@ -937,6 +937,34 @@
       border-color: var(--border-bright);
     }
 
+    .ph-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 100px;
+      background: rgba(218, 85, 47, 0.1);
+      border: 1px solid rgba(218, 85, 47, 0.3);
+      color: #da552f;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      margin-bottom: 24px;
+    }
+
+    .ph-btn:hover {
+      background: rgba(218, 85, 47, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(218, 85, 47, 0.2);
+    }
+
+    .ph-logo {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
     .hero-meta {
       margin-top: 24px;
       font-size: 13px;
@@ -1129,9 +1157,17 @@
 
   <!-- Idle state -->
   <div id="home-idle" class="home-hero">
-    <div class="hero-tag fade-up">⏱ Every 30 minutes — stay honest</div>
-    <h1 class="hero-title fade-up-2">Know where your<br/><span>time is going.</span></h1>
-    <p class="hero-desc fade-up-3">
+    <div class="fade-up">
+      <a href="https://www.producthunt.com/products/worklog-stay-honest" target="_blank" class="ph-btn">
+        <svg class="ph-logo" viewBox="0 0 40 40">
+          <path d="M20,0C8.954,0,0,8.954,0,20s8.954,20,20,20s20-8.954,20-20S31.046,0,20,0z M26.471,15.703c-0.292,0.92-0.842,1.724-1.558,2.308c-0.716,0.583-1.6,0.916-2.502,0.916H18V26h-4V10h8.411c0.902,0,1.786,0.333,2.502,0.916c0.716,0.583,1.266,1.388,1.558,2.308C26.764,14.07,26.764,14.881,26.471,15.703z M18,15.5h4.411c0.354,0,0.672-0.126,0.893-0.344c0.222-0.218,0.339-0.518,0.339-0.835c0-0.317-0.117-0.617-0.339-0.835C23.083,13.268,22.765,13.142,22.411,13.142H18V15.5z"/>
+        </svg>
+        Featured on Product Hunt
+      </a>
+    </div>
+    <div class="hero-tag fade-up-2">⏱ Every 30 minutes — stay honest</div>
+    <h1 class="hero-title fade-up-3">Know where your<br/><span>time is going.</span></h1>
+    <p class="hero-desc fade-up-4">
       A full-screen pause every 30 minutes. Write down what you actually did.
       That's it. No dashboards. No analytics. Just radical honesty.
     </p>
